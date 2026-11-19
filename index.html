@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jaeger Clash</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#02050b;color:#eafcff;font-family:monospace;overflow:hidden}canvas{display:block;width:100vw;height:100vh;image-rendering:pixelated}</style>
+</head>
+<body><canvas id="game"></canvas><script>
+const c=document.getElementById('game'),x=c.getContext('2d');
+let w,h,scale,keys={},state='menu',tick=0;
+const rng=n=>Math.floor(Math.random()*n);
+function resize(){w=innerWidth;h=innerHeight;c.width=w;c.height=h;scale=Math.min(w/960,h/540)}addEventListener('resize',resize);resize();
+addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=1;if(e.key==='Enter'&&state==='menu')start();if(e.key==='r'&&state==='over')start()});addEventListener('keyup',e=>keys[e.key.toLowerOf?e.key.toLowerCase():e.key]=0);
+const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+let p,k,particles=[];
+function start(){p={x:180,y:0,vx:0,vy:0,hp:100,facing:1,frame:0,attack:0,hurt:0};k={x:680,y:0,vx:0,vy:0,hp:100,facing:-1,frame:0,attack:0,hurt:0};particles=[];state='fight'}
+function ground(){return h/scale-80*scale/scale} // unused placeholder
+function hit(a,b){const d=Math.abs(a.x-b.x);if(d<75&&a.attack===12&&b.hurt<=0){b.hp=clamp(b.hp-7,0,100);b.hurt=20;b.vx=a.facing*7;particles.push({x:b.x,y:b.y-55,c:'#f3d57a',n:8,t:20})}}
+function update(){tick++;if(state!=='fight')return;
+let floor=h/scale-110;
+p.vy+=1;p.y+=p.vy;if(p.y>floor){p.y=floor;p.vy=0}k.vy+=1;k.y+=k.vy;if(k.y>floor){k.y=floor;k.vy=0}
+p.vx*=.8;k.vx*=.8;p.x+=p.vx;k.x+=k.vx;
+if(keys.a)p.vx-=1.4;if(keys.d)p.vx+=1.4;if(keys.w&&p.y>=floor)p.vy=-17;if(keys.f&&p.attack<=0)p.attack=28;if(keys.g&&p.attack<=0)p.attack=28;
+if(k.x>p.x+140)k.vx-=.8;if(k.x<p.x-140)k.vx+=.8;if(k.attack<=0&&Math.abs(k.x-p.x)<120&&rng(35)==0)k.attack=30;
+if(p.attack>0)p.attack--;if(k.attack>0)k.attack--;if(p.hurt>0)p.hurt--;if(k.hurt>0)k.hurt--;
+if(p.attack===12)hit(p,k);if(k.attack===12)hit(k,p);p.facing=k.x>p.x?1:-1;k.facing=p.x>k.x?1:-1;
+p.x=clamp(p.x,20,920);k.x=clamp(k.x,20,920);
+particles.forEach(q=>{q.t--;q.x+=rng(5)-2;q.y+=rng(5)-2});particles=particles.filter(q=>q.t>0);
+if(p.hp<=0||k.hp<=0)state='over'}
+function px(s){x.save();x.scale(s,s)}
+function rect(a,b,c,d,col){x.fillStyle=col;x.fillRect(Math.round(a),Math.round(b),Math.round(c),Math.round(d))}
+function bg(){let s=scale;x.save();x.scale(s,s);let g=x.createLinearGradient(0,0,0,540);g.addColorStop(0,'#071224');g.addColorStop(.55,'#173247');g.addColorStop(1,'#081018');x.fillStyle=g;x.fillRect(0,0,960,540);
+// rain streaks
+for(let i=0;i<55;i++){let rx=(i*137+tick*2)%980-10,ry=(i*83+tick*4)%540;rect(rx,ry,2,18,'rgba(120,210,230,.18)')}
+// skyline
+for(let i=0;i<14;i++){let bh=70+(i*53)%150;rect(i*82,430-bh,66,bh,i%3?'#08131d':'#0d1c28')}
+// distant kaiju wake
+for(let i=0;i<18;i++)rect(i*60,435+(i%3)*7,70,108,'#07141d');x.restore()}
+function jaeger(o){let s=scale;x.save();x.translate(o.x*s,(o.y+110)*s);if(o.facing<0)x.scale(-1,1);let hurt=o.hurt>0? '#d94c45':'#9dd2d2';
+// legs
+rect(-42,-38,22,60,'#31556a');rect(16,-38,22,60,'#31556a');rect(-46,-10,30,18,'#182d3d');rect(12,-10,30,18,'#182d3d');
+// body
+rect(-36,-90,72,58,'#263f52');rect(-28,-104,56,20,'#50717d');rect(-20,-112,40,15,hurt);rect(-48,-74,96,20,'#b4c5c0');rect(-44,-82,88,13,'#d7a94d');
+// arms
+if(o.attack>0){rect(38,-82,68,18,'#7fa4a6');rect(94,-76,26,12,'#d7a94d')}else{rect(38,-82,24,54,'#6f969b');rect(-62,-82,24,54,'#6f969b')}
+// reactor
+rect(-8,-66,16,16,'#86f0de');rect(-4,-62,8,8,'#efffc8');
+x.restore()}
+function kaiju(o){let s=scale;x.save();x.translate(o.x*s,(o.y+110)*s);if(o.facing<0)x.scale(-1,1);let hurt=o.hurt>0?'#b64d62':'#5d526c';
+// legs
+rect(-42,-35,24,55,'#3a3150');rect(18,-35,24,55,'#3a3150');rect(-50,-4,34,16,'#251c35');rect(14,-4,34,16,'#251c35');
+// tail
+rect(-85,-52,58,18,'#493e60');rect(-101,-61,28,16,'#493e60');
+// torso
+rect(-38,-96,76,68,hurt);rect(-30,-106,60,18,'#76566e');rect(-22,-118,44,18,'#8a637a');
+// horns
+rect(-28,-126,10,18,'#cab8a0');rect(18,-126,10,18,'#cab8a0');
+// arms
+if(o.attack>0){rect(34,-78,62,20,'#5d526c');rect(82,-92,28,28,'#2d263d')}else{rect(34,-82,24,54,'#5d526c');rect(-58,-82,24,54,'#5d526c')}
+// face/eyes
+rect(-18,-92,36,22,'#271e38');rect(-12,-88,8,5,'#ef6877');rect(4,-88,8,5,'#ef6877');
+// shell
+rect(-48,-64,96,12,'#76566e');
+x.restore()}
+function hud(){let s=scale;x.save();x.scale(s,s);rect(48,28,360,28,'#182632');rect(52,32,352,20,'#070b11');rect(52,32,352*p.hp/100,20,p.hp<30?'#dd4f50':'#57c5bb');rect(552,28,360,28,'#182632');rect(556,32,352,20,'#070b11');rect(556,32,352*k.hp/100,20,k.hp<30?'#dd4f50':'#b64d62');x.textAlign='center';x.font='bold 20px monospace';x.fillStyle='#d9fbff';x.fillText('STRIKER EUREKA',228,76);x.fillText('OBSIDIAN TITAN',732,76);x.restore()}
+function draw(){c.style.background='#02050b';bg();if(state==='menu'){let s=scale;x.save();x.translate(w/2,h/2);x.scale(s,s);x.textAlign='center';x.fillStyle='#d8feff';x.font='bold 62px monospace';x.fillText('JAEGER CLASH',0,-150);x.font='18px monospace';x.fillStyle='#76b4bc';x.fillText('KAIJU ERUPTION',0,-110);rect(-160,-20,320,54,'#142f3b');x.fillStyle='#efffc8';x.font='bold 22px monospace';x.fillText('PRESS ENTER',0,13);x.fillStyle='#9bbfc2';x.font='14px monospace';x.fillText('A/D MOVE   W JUMP   F/G PUNCH',0,70);x.restore();return}
+jaeger(p);kaiju(k);hud();particles.forEach(q=>{let s=scale;rect(q.x*s,(q.y+110)*s,5*s,5*s,q.c)});if(state==='over'){let s=scale;x.save();x.translate(w/2,h/2);x.scale(s,s);rect(-210,-55,420,110,'rgba(2,8,14,.92)');x.textAlign='center';x.fillStyle='#efffc8';x.font='bold 36px monospace';x.fillText(p.hp<=0?'KAIJU WINS':'JAEGER WINS',0,-6);x.fillStyle='#9bbfc2';x.font='16px monospace';x.fillText('PRESS R TO REMATCH',0,30);x.restore()}}
+function loop(){update();draw();requestAnimationFrame(loop)}loop();
+</script></body></html>
